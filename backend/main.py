@@ -4,7 +4,8 @@ import time
 from datetime import datetime
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, text
 from database import Base, engine, get_db
 import models
 import schemas
@@ -46,7 +47,16 @@ class ChatQuery(BaseModel):
     top_k: int = 5
 
 # Create database tables
+# Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Migration: Ensure synced_at column exists (for existing databases)
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP"))
+        conn.commit()
+except Exception as e:
+    print(f"Migration warning: {e}")
 
 # HuggingFace Space URLs from environment
 HF_RAG_URL = os.getenv("HF_RAG_URL", "https://VivanRajath-AI-product.hf.space/index-product")
