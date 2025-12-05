@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import ProductCard from './components/ProductCard';
 import ProductDetail from './components/ProductDetail';
 import ChatInterface from './components/ChatInterface';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingBag, RefreshCw } from 'lucide-react';
 import config from './config';
 
 const Home = () => {
@@ -165,6 +165,17 @@ function App() {
           </div>
           <div className="nav-links">
             <Link to="/">Home</Link>
+            <button className="sync-btn" onClick={() => {
+              if (window.confirm("This will re-sync all data with the AI model. It may take a few minutes. Continue?")) {
+                fetch(`${config.API_URL}/force-resync`, { method: 'POST' })
+                  .then(res => res.json())
+                  .then(data => alert(data.message || "Sync started!"))
+                  .catch(err => alert("Error triggering sync: " + err));
+              }
+            }}>
+              <RefreshCw size={18} style={{ marginRight: '5px' }} />
+              Refresh Data
+            </button>
           </div>
         </nav>
 
