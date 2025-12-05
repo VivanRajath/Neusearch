@@ -22,9 +22,7 @@ from pathlib import Path
 
 app = FastAPI(title="AI Shopping Assistant API")
 
-# Mount static files
-# We check if the directory exists to avoid errors in local development if not built
-# Handle nested static/static structure from React build
+
 static_dir = Path("static")
 if (static_dir / "static").exists():
     app.mount("/static", StaticFiles(directory="static/static"), name="static")
@@ -36,7 +34,7 @@ elif static_dir.exists():
 # CORS configuration - allow frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with specific frontend URL in production
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,11 +44,10 @@ class ChatQuery(BaseModel):
     query: str
     top_k: int = 5
 
-# Create database tables
-# Create database tables
+
 Base.metadata.create_all(bind=engine)
 
-# Migration: Ensure synced_at column exists (for existing databases)
+
 try:
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP"))
@@ -73,13 +70,11 @@ async def serve_spa():
 
 
 
-# Catch-all for SPA client-side routing
-# This must be at the end of the file or after specific API routes
+
 @app.exception_handler(404)
 async def custom_404_handler(request, exc):
     path = request.url.path
-    # If trying to access a file with extension that doesn't exist, return 404
-    # This prevents "Uncaught SyntaxError: Unexpected token '<'" where HTML is returned for JS/CSS
+
     if "." in path.split("/")[-1] and static_dir.exists():
         return {"detail": "Not Found"}
         
@@ -154,14 +149,14 @@ def sync_to_rag(db: Session = Depends(get_db)):
                     db.commit()
                     success_count += 1
                 else:
-                    print(f"⚠️ Failed to sync product {p.id}: {response.status_code}")
+                    print(f" Failed to sync product {p.id}: {response.status_code}")
                     
             # Rate limiting: Sleep 2 seconds between requests
             # This prevents "503 UNAVAILABLE" from Google GenAI
             time.sleep(2)
             
         except Exception as e:
-            print(f"❌ Error sending product {p.id} to HF:", e)
+            print(f" Error sending product {p.id} to HF:", e)
 
     return {"message": f"Synced {success_count} products to HuggingFace RAG"}
 
@@ -207,8 +202,6 @@ def chat_endpoint(body: ChatQuery):
                     "score": result.get("score", 0)
                 })
             
-            # Filter out low-relevance results (noise)
-            # Assuming Cosine Similarity: 0.25 is a reasonable cutoff for specific queries
             recommendations = [r for r in recommendations if r['score'] > 0.25]
 
             
@@ -225,8 +218,7 @@ def chat_endpoint(body: ChatQuery):
             "error": str(e)
         }
 
-# Serve specific root files that React expects
-# Placed AFTER API routes to avoid shadowing them
+
 @app.get("/{filename}")
 async def serve_root_files(filename: str):
     if static_dir.exists():
@@ -235,16 +227,13 @@ async def serve_root_files(filename: str):
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
             
-    # If file not found in static root, it might be a client-side route
-    # Let the 404 handler decide (or return 404 for specific extensions)
+
     if "." in filename:
          # It's likely a file request, return 404 if not found
          return {"detail": "Not Found"}
     return FileResponse("static/index.html")
 
-# ---------------------------------------------------
-# SCRAPER INTEGRATION (For Unified Deployment)
-# ---------------------------------------------------
+
 
 @app.post("/scrape")
 async def trigger_scrape(background_tasks: BackgroundTasks):
@@ -273,9 +262,9 @@ async def scrape_and_sync_task():
     """
     Orchestrator: Runs scraper -> Syncs to RAG
     """
-    print("🕷️ [Task] Starting Scraper...")
+    print(" [Task] Starting Scraper...")
     await run_all_scrapers()
-    print("✅ [Task] Scraper finished. Starting RAG Sync...")
+    print(" [Task] Scraper finished. Starting RAG Sync...")
     
     # Start Sync Process using a new DB session
     db = SessionLocal()
@@ -285,10 +274,10 @@ async def scrape_and_sync_task():
             products = db.query(models.Product).filter(models.Product.synced_at == None).limit(10).all()
             
             if not products:
-                print("🎉 [Task] All products synced to RAG!")
+                print(" [Task] All products synced to RAG!")
                 break
                 
-            print(f"🔄 [Task] Syncing batch of {len(products)} products...")
+            print(f" [Task] Syncing batch of {len(products)} products...")
             
             for p in products:
                 payload = {
@@ -308,9 +297,9 @@ async def scrape_and_sync_task():
                             p.synced_at = datetime.utcnow()
                             db.commit()
                         else:
-                            print(f"⚠️ Failed to sync {p.id}: {response.status_code}")
+                            print(f" Failed to sync {p.id}: {response.status_code}")
                 except Exception as e:
-                    print(f"❌ Error syncing {p.id}: {e}")
+                    print(f" Error syncing {p.id}: {e}")
                 
                 # Rate limit (2s delay)
                 await asyncio.sleep(2)

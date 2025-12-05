@@ -6,9 +6,7 @@ from asgiref.sync import sync_to_async
 from models import Product
 from database import SessionLocal
 
-# ---------------------------------------------------
-# HELPER: CLEAN HTML
-# ---------------------------------------------------
+
 def clean_html(raw_html):
     """Remove HTML tags, scripts, and styles to get clean text"""
     if not raw_html:
@@ -28,12 +26,10 @@ def clean_html(raw_html):
     # Replace HTML entities
     cleantext = cleantext.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
     
-    return " ".join(cleantext.split())  # Normalize whitespace
+    return " ".join(cleantext.split()) 
 
 
-# ---------------------------------------------------
-# HELPER: SAVE PRODUCT
-# ---------------------------------------------------
+
 def save_product(db, url, source, title, price, description, images, category, features):
     """Synchronous function to save product to database"""
     try:
@@ -63,12 +59,9 @@ def save_product(db, url, source, title, price, description, images, category, f
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"💾 Database error: {e}")
+        print(f" Database error: {e}")
 
 
-# ---------------------------------------------------
-# GENERIC SHOPIFY SCRAPER (JSON API)
-# ---------------------------------------------------
 async def scrape_shopify_site(site_name, base_url, default_category, limit_per_page=250):
     print(f"\n🔵 [{site_name}] Starting scrape via JSON API (Paginated)...")
     
@@ -79,22 +72,22 @@ async def scrape_shopify_site(site_name, base_url, default_category, limit_per_p
     try:
         while True:
             api_url = f"{base_url}/products.json?limit={limit_per_page}&page={page}"
-            print(f"📥 [{site_name}] Fetching page {page}...")
+            print(f" [{site_name}] Fetching page {page}...")
             
             response = await asyncio.to_thread(requests.get, api_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
             
             if response.status_code != 200:
-                print(f"❌ [{site_name}] Failed to fetch page {page}: {response.status_code}")
+                print(f" [{site_name}] Failed to fetch page {page}: {response.status_code}")
                 break
 
             data = response.json()
             products = data.get("products", [])
             
             if not products:
-                print(f"🏁 [{site_name}] No more products found at page {page}.")
+                print(f" [{site_name}] No more products found at page {page}.")
                 break
             
-            print(f"🟢 [{site_name}] Page {page}: Found {len(products)} products")
+            print(f"[{site_name}] Page {page}: Found {len(products)} products")
             
             for p in products:
                 try:
@@ -141,28 +134,28 @@ async def scrape_shopify_site(site_name, base_url, default_category, limit_per_p
                         features=features
                     )
                     saved_count += 1
-                    print(f"✅ [{site_name}] Saved: {title[:30]}... (₹{price})")
+                    print(f" [{site_name}] Saved: {title[:30]}... (₹{price})")
                     
                 except Exception as e:
-                    print(f"⚠️ [{site_name}] Error processing product: {e}")
+                    print(f" [{site_name}] Error processing product: {e}")
                     continue
             
             page += 1
-            await asyncio.sleep(1) # Be polite
+            await asyncio.sleep(1) 
             
     except Exception as e:
-        print(f"❌ [{site_name}] Fatal error: {e}")
+        print(f" [{site_name}] Fatal error: {e}")
     finally:
         db.close()
         
-    print(f"🎉 [{site_name}] Completed - {saved_count} products saved.")
+    print(f" [{site_name}] Completed - {saved_count} products saved.")
 
 
-# ---------------------------------------------------
+
 # MAIN RUNNER
-# ---------------------------------------------------
+
 async def run_all_scrapers():
-    print("🚀 Starting all scrapers (JSON Method)...")
+    print(" Starting all scrapers (JSON Method)...")
     print("=" * 60)
     
     # Scrape Traya
