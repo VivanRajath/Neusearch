@@ -1,10 +1,11 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: shopping-assistant-db
+databases:
+  - name: shopping-assistant-db
+    databaseName: myapp_db
+    user: myapp_user
     plan: starter
     region: oregon
 
+services:
   # Backend API Service
   - type: web
     name: shopping-assistant-backend
