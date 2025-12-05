@@ -1,0 +1,79 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: shopping-assistant-db
+    env: docker
+    plan: starter
+    region: oregon
+    databases:
+      - name: myapp_db
+        user: myapp_user
+
+  # Backend API Service
+  - type: web
+    name: shopping-assistant-backend
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shopping-assistant-db
+          property: connectionString
+      - key: HF_RAG_URL
+        value: https://VivanRajath-AI-product.hf.space/index-product
+      - key: HF_SEARCH_URL
+        value: https://VivanRajath-AI-product.hf.space/search
+      - key: HF_CHAT_URL
+        value: https://VivanRajath-AI-product.hf.space/chat
+    healthCheckPath: /health
+
+  # Frontend Static Site
+  - type: web
+    name: shopping-assistant-frontend
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile.frontend
+    dockerContext: .
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: shopping-assistant-backend
+          property: host
+
+  # Scraper Background Worker
+  - type: worker
+    name: shopping-assistant-scraper
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile.scraper
+    dockerContext: .
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shopping-assistant-db
+          property: connectionString
+      - key: SCRAPER_SCHEDULE_HOUR
+        value: "2"
+
+  # Sync Service Background Worker
+  - type: worker
+    name: shopping-assistant-sync
+    env: docker
+    region: oregon
+    plan: starter
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    dockerCommand: python sync_service.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: shopping-assistant-db
+          property: connectionString
+      - key: HF_RAG_URL
+        value: https://VivanRajath-AI-product.hf.space/index-product
