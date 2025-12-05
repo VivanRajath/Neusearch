@@ -2,12 +2,8 @@ services:
   # PostgreSQL Database
   - type: pserv
     name: shopping-assistant-db
-    env: docker
     plan: starter
     region: oregon
-    databases:
-      - name: myapp_db
-        user: myapp_user
 
   # Backend API Service
   - type: web
