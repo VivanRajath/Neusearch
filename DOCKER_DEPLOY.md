@@ -91,70 +91,39 @@ docker-compose exec scraper python scrape.py
 
 ## 🌐 Deploying to Render
 
-### Option 1: Using Render Blueprint (Recommended)
+### Option 1: Render Blueprint (Recommended but requires Card)
+If you have a payment method linked (even for free tier), use the `render.yaml` Blueprint.
+It automatically deploys all services.
 
-1. **Push code to GitHub**:
-   ```bash
-   git init
-   git add .
-   git commit -m "Add Docker configuration"
-   git remote add origin <your-github-repo-url>
-   git push -u origin main
-   ```
+### Option 2: Unified Manual Deployment (No Card Required)
+This method allows you to deploy the entire application as a **single Free Tier Web Service**.
 
-2. **Deploy on Render**:
+1. **Deploy on Render**:
    - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click "New +" → "Blueprint"
+   - Click "New +" → "Web Service"
    - Connect your GitHub repository
-   - Render will automatically detect `render.yaml`
-   - Click "Apply" to create all services
+   - **Name**: `shopping-assistant`
+   - **Language**: Docker
+   - **Branch**: `master` (or your main branch)
+   - **Root Directory**: `.` (leave empty)
+   - **Dockerfile Path**: `Dockerfile` (default)
+   - **Plan**: Free
 
-### Option 2: Manual Setup
+2. **Environment Variables**:
+   Add these environment variables in the Render Dashboard:
+   - `DATABASE_URL`: Your PostgreSQL connection string (Internal URL if using Render Postgres, or External)
+   - `HF_RAG_URL`: `https://VivanRajath-AI-product.hf.space/index-product`
+   - `HF_SEARCH_URL`: `https://VivanRajath-AI-product.hf.space/search`
+   - `HF_CHAT_URL`: `https://VivanRajath-AI-product.hf.space/chat`
+   - `SCRAPER_SCHEDULE_HOUR`: `2` (Optional)
 
-1. **Create PostgreSQL Database**:
-   - New → PostgreSQL
-   - Name: `shopping-assistant-db`
-   - Plan: Starter (or Free)
-   - Note the connection string
+   *(Note: The scraper and sync services run as background processes. In this unified deployment, only the Web Service runs. If you need the background scrapers, you can run them as separate services manually using their specific Dockerfiles, but for the main app, this single service is enough.)*
 
-2. **Create Backend Web Service**:
-   - New → Web Service
-   - Connect repository
-   - Name: `shopping-assistant-backend`
-   - Environment: Docker
-   - Dockerfile path: `./Dockerfile.backend`
-   - Add environment variables:
-     - `DATABASE_URL`: <from PostgreSQL service>
-     - `HF_RAG_URL`: https://VivanRajath-AI-product.hf.space/index-product
-     - `HF_SEARCH_URL`: https://VivanRajath-AI-product.hf.space/search
-     - `HF_CHAT_URL`: https://VivanRajath-AI-product.hf.space/chat
-   - Health Check Path: `/health`
+3. **Deploy**:
+   - Click "Create Web Service"
+   - Wait for the build to finish.
+   - The app will be available at your Render URL (e.g., `https://shopping-assistant.onrender.com`).
 
-3. **Create Frontend Web Service**:
-   - New → Web Service
-   - Same repository
-   - Name: `shopping-assistant-frontend`
-   - Environment: Docker
-   - Dockerfile path: `./Dockerfile.frontend`
-
-4. **Create Scraper Background Worker**:
-   - New → Background Worker
-   - Name: `shopping-assistant-scraper`
-   - Environment: Docker
-   - Dockerfile path: `./Dockerfile.scraper`
-   - Add environment variables:
-     - `DATABASE_URL`: <from PostgreSQL service>
-     - `SCRAPER_SCHEDULE_HOUR`: 2
-
-5. **Create Sync Background Worker**:
-   - New → Background Worker
-   - Name: `shopping-assistant-sync`
-   - Environment: Docker
-   - Dockerfile path: `./Dockerfile.backend`
-   - Docker Command: `python sync_service.py`
-   - Add environment variables:
-     - `DATABASE_URL`: <from PostgreSQL service>
-     - `HF_RAG_URL`: https://VivanRajath-AI-product.hf.space/index-product
 
 ## ⚙️ Configuration
 

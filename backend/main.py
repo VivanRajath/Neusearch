@@ -10,7 +10,17 @@ import httpx
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
+
 app = FastAPI(title="AI Shopping Assistant API")
+
+# Mount static files
+# We check if the directory exists to avoid errors in local development if not built
+static_dir = Path("static")
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # CORS configuration - allow frontend access
 app.add_middleware(
@@ -35,10 +45,21 @@ HF_CHAT_URL = os.getenv("HF_CHAT_URL", "https://VivanRajath-AI-product.hf.space/
 
 
 @app.get("/")
-def home():
-    return {"message": "AI Shopping Assistant API is running"}
+async def serve_spa():
+    """Serve the React App"""
+    if static_dir.exists():
+        return FileResponse("static/index.html")
+    return {"message": "AI Shopping Assistant API is running (Frontend not built)"}
 
-@app.get("/health")
+# Catch-all for SPA client-side routing
+# This must be at the end of the file or after specific API routes
+@app.exception_handler(404)
+async def custom_404_handler(request, exc):
+    if static_dir.exists():
+        return FileResponse("static/index.html")
+    return {"detail": "Not Found"}
+
+@app.get("/api/health")
 def health_check():
     """Health check endpoint for container monitoring"""
     return {
