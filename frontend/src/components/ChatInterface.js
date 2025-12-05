@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Maximize2, Minimize2 } from 'lucide-react';
+import config from '../config';
 
 const ChatInterface = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +27,8 @@ const ChatInterface = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('http://127.0.0.1:8000/chat', {
+            // Call backend API
+            const response = await fetch(`${config.API_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query: userMessage.text })

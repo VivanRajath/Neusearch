@@ -64,6 +64,13 @@ def add_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
 def get_products(db: Session = Depends(get_db)):
     return db.query(models.Product).all()
 
+@app.get("/products/{product_id}")
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not product:
+        return {"error": "Product not found"}
+    return product
+
 @app.post("/sync-to-rag")
 def sync_to_rag(db: Session = Depends(get_db)):
 

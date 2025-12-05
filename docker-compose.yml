@@ -10,7 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./backend/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myapp_user"]
       interval: 10s
@@ -19,8 +19,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: shopping_backend
     environment:
       DATABASE_URL: postgresql://myapp_user:mypassword@postgres:5432/myapp_db
@@ -34,13 +34,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./:/app
+      - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: shopping_frontend
     ports:
       - "3000:80"
@@ -50,7 +50,7 @@ services:
 
   scraper:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile.scraper
     container_name: shopping_scraper
     environment:
@@ -61,12 +61,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./:/app
+      - ./backend:/app
 
   sync-service:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: shopping_sync
     environment:
       DATABASE_URL: postgresql://myapp_user:mypassword@postgres:5432/myapp_db
@@ -76,7 +76,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ./:/app
+      - ./backend:/app
     command: python sync_service.py
 
 volumes:

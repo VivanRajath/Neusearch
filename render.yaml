@@ -12,8 +12,8 @@ services:
     env: docker
     region: oregon
     plan: starter
-    dockerfilePath: ./Dockerfile.backend
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -33,8 +33,8 @@ services:
     env: docker
     region: oregon
     plan: starter
-    dockerfilePath: ./Dockerfile.frontend
-    dockerContext: .
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
     envVars:
       - key: REACT_APP_API_URL
         fromService:
@@ -48,8 +48,8 @@ services:
     env: docker
     region: oregon
     plan: starter
-    dockerfilePath: ./Dockerfile.scraper
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile.scraper
+    dockerContext: ./backend
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -64,8 +64,8 @@ services:
     env: docker
     region: oregon
     plan: starter
-    dockerfilePath: ./Dockerfile.backend
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     dockerCommand: python sync_service.py
     envVars:
       - key: DATABASE_URL

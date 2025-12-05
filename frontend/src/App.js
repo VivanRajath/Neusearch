@@ -4,6 +4,7 @@ import ProductCard from './components/ProductCard';
 import ProductDetail from './components/ProductDetail';
 import ChatInterface from './components/ChatInterface';
 import { ShoppingBag } from 'lucide-react';
+import config from './config';
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -13,9 +14,11 @@ const Home = () => {
   const productsPerPage = 12;
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/products')
+    console.log('Fetching products from:', `${config.API_URL}/products`);
+    fetch(`${config.API_URL}/products`)
       .then(res => res.json())
       .then(data => {
+        console.log('Products fetched:', data);
         // Sort: Products with images and price > 0 come first
         const sortedData = data.sort((a, b) => {
           try {
@@ -37,6 +40,7 @@ const Home = () => {
             return 0;
           }
         });
+        console.log('Sorted products:', sortedData);
         setProducts(sortedData);
         setLoading(false);
       })
@@ -55,11 +59,15 @@ const Home = () => {
     ? products
     : products.filter(p => p.source === activeTab);
 
+  console.log('Active tab:', activeTab, 'Filtered products:', filteredProducts.length);
+
   // Pagination Logic
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+  console.log('Current page products:', currentProducts.length, currentProducts);
 
   const paginate = (pageNumber) => {
     setCurrentPage(pageNumber);
