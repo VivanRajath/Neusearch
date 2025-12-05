@@ -6,7 +6,7 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, text
-from database import Base, engine, get_db
+from database import Base, engine, get_db, SessionLocal
 import models
 import schemas
 import httpx
@@ -244,11 +244,65 @@ async def serve_root_files(filename: str):
 @app.post("/scrape")
 async def trigger_scrape(background_tasks: BackgroundTasks):
     """Manually trigger the scraper in the background"""
-    background_tasks.add_task(run_all_scrapers)
-    return {"message": "Scraping started in background"}
+    background_tasks.add_task(scrape_and_sync_task)
+    return {"message": "Scraping and syncing started in background"}
 
 @app.on_event("startup")
 async def startup_event():
     """Run scraper on startup to ensure data exists"""
     # We use asyncio.create_task to run it without blocking startup
-    asyncio.create_task(run_all_scrapers())
+    asyncio.create_task(scrape_and_sync_task())
+
+async def scrape_and_sync_task():
+    """
+    Orchestrator: Runs scraper -> Syncs to RAG
+    """
+    print("🕷️ [Task] Starting Scraper...")
+    await run_all_scrapers()
+    print("✅ [Task] Scraper finished. Starting RAG Sync...")
+    
+    # Start Sync Process using a new DB session
+    db = SessionLocal()
+    try:
+        while True:
+            # Fetch unsynced products in batches of 10
+            products = db.query(models.Product).filter(models.Product.synced_at == None).limit(10).all()
+            
+            if not products:
+                print("🎉 [Task] All products synced to RAG!")
+                break
+                
+            print(f"🔄 [Task] Syncing batch of {len(products)} products...")
+            
+            for p in products:
+                payload = {
+                    "id": p.id,
+                    "title": p.title,
+                    "description": p.description,
+                    "features": p.features,
+                    "category": p.category,
+                    "url": p.url,
+                    "image_url": p.images.split(",")[0] if p.images else ""
+                }
+
+                try:
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        response = await client.post(HF_RAG_URL, json=payload)
+                        if response.status_code == 200:
+                            p.synced_at = datetime.utcnow()
+                            db.commit()
+                        else:
+                            print(f"⚠️ Failed to sync {p.id}: {response.status_code}")
+                except Exception as e:
+                    print(f"❌ Error syncing {p.id}: {e}")
+                
+                # Rate limit (2s delay)
+                await asyncio.sleep(2)
+                
+            # Rate limit between batches
+            await asyncio.sleep(1)
+            
+    except Exception as e:
+        print(f"❌ [Task] Sync process failed: {e}")
+    finally:
+        db.close()
