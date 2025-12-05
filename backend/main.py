@@ -252,6 +252,17 @@ async def trigger_scrape(background_tasks: BackgroundTasks):
     background_tasks.add_task(scrape_and_sync_task)
     return {"message": "Scraping and syncing started in background"}
 
+@app.post("/force-resync")
+async def force_resync(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """
+    Reset sync status for all products and trigger re-sync.
+    Use this if HF Space was restarted/cleared.
+    """
+    db.query(models.Product).update({models.Product.synced_at: None})
+    db.commit()
+    background_tasks.add_task(scrape_and_sync_task)
+    return {"message": "Sync status reset. Full re-sync started in background."}
+
 @app.on_event("startup")
 async def startup_event():
     """Run scraper on startup to ensure data exists"""
