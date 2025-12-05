@@ -17,19 +17,23 @@ from pathlib import Path
 app = FastAPI(title="AI Shopping Assistant API")
 
 # Mount static files
-# Mount static files
 # We check if the directory exists to avoid errors in local development if not built
+# Handle nested static/static structure from React build
 static_dir = Path("static")
-if static_dir.exists():
+if (static_dir / "static").exists():
+    app.mount("/static", StaticFiles(directory="static/static"), name="static")
+elif static_dir.exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Serve specific root files that React expects
 @app.get("/{filename}")
 async def serve_root_files(filename: str):
     if static_dir.exists():
+        # Check root level first
         file_path = static_dir / filename
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
+            
     # If file not found in static root, it might be a client-side route
     # Let the 404 handler decide (or return 404 for specific extensions)
     if "." in filename:
