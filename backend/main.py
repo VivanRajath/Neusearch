@@ -207,6 +207,11 @@ def chat_endpoint(body: ChatQuery):
                     "score": result.get("score", 0)
                 })
             
+            # Filter out low-relevance results (noise)
+            # Assuming Cosine Similarity: 0.25 is a reasonable cutoff for specific queries
+            recommendations = [r for r in recommendations if r['score'] > 0.25]
+
+            
             # Step 4: Return combined response
             return {
                 "answer": chat_data.get("response", "Here are some products I found for you!"),
