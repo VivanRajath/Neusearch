@@ -76,7 +76,8 @@ const ChatInterface = () => {
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`message ${msg.sender}`}>
                                 <div className="message-content">
-                                    <p>{msg.text}</p>
+                                    <p dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br />') }}></p>
+
                                     {msg.recommendations && msg.recommendations.length > 0 && (
                                         <div className="recommendations">
                                             {msg.recommendations.map((rec, rIdx) => (
@@ -101,12 +102,17 @@ const ChatInterface = () => {
                     </div>
 
                     <div className="chat-input">
-                        <input
-                            type="text"
+                        <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSend();
+                                }
+                            }}
                             placeholder="Ask for recommendations..."
+                            rows="1"
                         />
                         <button onClick={handleSend} disabled={loading}>
                             <Send size={20} />

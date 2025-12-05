@@ -785,7 +785,7 @@ body {
   background: var(--bg-card);
 }
 
-.chat-input input {
+.chat-input textarea {
   flex: 1;
   padding: 0.75rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -795,6 +795,10 @@ body {
   color: var(--text-primary);
   font-size: 0.95rem;
   transition: var(--transition-smooth);
+  font-family: inherit;
+  resize: none;
+  min-height: 50px;
+  max-height: 120px;
 }
 
 .chat-input input::placeholder {
