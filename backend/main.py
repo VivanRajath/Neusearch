@@ -9,6 +9,9 @@ import schemas
 import httpx
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import BackgroundTasks
+from scrape import run_all_scrapers
+import asyncio
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -138,6 +141,7 @@ def chat_endpoint(body: ChatQuery):
     
     try:
         with httpx.Client(timeout=30) as client:
+            
             # Step 1: Get LLM response from HF /chat
             # (HF /chat internally calls /search and formats response)
             chat_payload = {
@@ -199,3 +203,19 @@ async def serve_root_files(filename: str):
          # It's likely a file request, return 404 if not found
          return {"detail": "Not Found"}
     return FileResponse("static/index.html")
+
+# ---------------------------------------------------
+# SCRAPER INTEGRATION (For Unified Deployment)
+# ---------------------------------------------------
+
+@app.post("/scrape")
+async def trigger_scrape(background_tasks: BackgroundTasks):
+    """Manually trigger the scraper in the background"""
+    background_tasks.add_task(run_all_scrapers)
+    return {"message": "Scraping started in background"}
+
+@app.on_event("startup")
+async def startup_event():
+    """Run scraper on startup to ensure data exists"""
+    # We use asyncio.create_task to run it without blocking startup
+    asyncio.create_task(run_all_scrapers())
