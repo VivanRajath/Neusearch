@@ -1,5 +1,7 @@
 # main.py
 import os
+import time
+from datetime import datetime
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -110,9 +112,19 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 @app.post("/sync-to-rag")
 def sync_to_rag(db: Session = Depends(get_db)):
+    """
+    Sync unsynced products to RAG.
+    Rate limited to avoid 503 errors from HF/GenAI.
+    """
+    # Only get products that haven't been synced yet
+    # Limit to 20 at a time to prevent timeout
+    products = db.query(models.Product).filter(models.Product.synced_at == None).limit(20).all()
+    
+    if not products:
+        return {"message": "No new products to sync"}
 
-    products = db.query(models.Product).all()
-
+    success_count = 0
+    
     for p in products:
         payload = {
             "id": p.id,
@@ -125,12 +137,23 @@ def sync_to_rag(db: Session = Depends(get_db)):
         }
 
         try:
-            with httpx.Client(timeout=15) as client:
-                client.post(HF_RAG_URL, json=payload)
+            with httpx.Client(timeout=30) as client:
+                response = client.post(HF_RAG_URL, json=payload)
+                if response.status_code == 200:
+                    p.synced_at = datetime.utcnow()
+                    db.commit()
+                    success_count += 1
+                else:
+                    print(f"⚠️ Failed to sync product {p.id}: {response.status_code}")
+                    
+            # Rate limiting: Sleep 2 seconds between requests
+            # This prevents "503 UNAVAILABLE" from Google GenAI
+            time.sleep(2)
+            
         except Exception as e:
-            print("Error sending to HF:", e)
+            print(f"❌ Error sending product {p.id} to HF:", e)
 
-    return {"message": "All products synced to HuggingFace RAG"}
+    return {"message": f"Synced {success_count} products to HuggingFace RAG"}
 
 @app.post("/chat")
 def chat_endpoint(body: ChatQuery):
