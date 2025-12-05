@@ -17,10 +17,25 @@ from pathlib import Path
 app = FastAPI(title="AI Shopping Assistant API")
 
 # Mount static files
+# Mount static files
 # We check if the directory exists to avoid errors in local development if not built
 static_dir = Path("static")
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve specific root files that React expects
+@app.get("/{filename}")
+async def serve_root_files(filename: str):
+    if static_dir.exists():
+        file_path = static_dir / filename
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+    # If file not found in static root, it might be a client-side route
+    # Let the 404 handler decide (or return 404 for specific extensions)
+    if "." in filename:
+         # It's likely a file request, return 404 if not found
+         return {"detail": "Not Found"}
+    return FileResponse("static/index.html")
 
 # CORS configuration - allow frontend access
 app.add_middleware(
@@ -55,6 +70,12 @@ async def serve_spa():
 # This must be at the end of the file or after specific API routes
 @app.exception_handler(404)
 async def custom_404_handler(request, exc):
+    path = request.url.path
+    # If trying to access a file with extension that doesn't exist, return 404
+    # This prevents "Uncaught SyntaxError: Unexpected token '<'" where HTML is returned for JS/CSS
+    if "." in path.split("/")[-1] and static_dir.exists():
+        return {"detail": "Not Found"}
+        
     if static_dir.exists():
         return FileResponse("static/index.html")
     return {"detail": "Not Found"}
